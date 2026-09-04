@@ -1,0 +1,664 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Spacecho 組織圖</title>
+<style>
+  :root {
+    --bg: #F6F0E6;
+    --ink: #3A3228;
+    --dim: #7A6A58;
+    --paper: #F6F0E6;
+    --card: #FBF6EC;
+    --edge: #8B6F55;
+    --terra: #C46A4A;
+    --ochre: #C48A3A;
+    --gold: #C48A3A;
+    --cyan: #5A7A72;
+    --violet: #7A5E78;
+    --rose: #A85A62;
+    --blue: #5A6E88;
+    --amber: #C48A3A;
+    --mint: #5E7A62;
+    --slate: #6E6458;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 100%; height: 100%; background: var(--bg); color: var(--ink);
+    font-family: "Noto Serif CJK TC", "Noto Sans CJK TC", "Noto Sans CJK SC", serif;
+    overflow: hidden; }
+  #stage { position: fixed; inset: 0; display: block; width: 100%; height: 100%; }
+  /* faint washi fiber overlay — not scanlines */
+  .washi-fiber {
+    position: fixed; inset: 0; z-index: 2; pointer-events: none;
+    background:
+      repeating-linear-gradient(92deg, rgba(90,70,50,0.018) 0 1px, transparent 1px 7px),
+      repeating-linear-gradient(8deg, rgba(70,55,40,0.012) 0 1px, transparent 1px 11px);
+  }
+  #title {
+    position: fixed; top: 18px; left: 22px; z-index: 4;
+    font-family: "Noto Serif CJK TC", "Noto Serif CJK SC", "Songti TC", serif;
+    font-size: 15px; font-weight: 600; letter-spacing: 0.06em;
+    color: #3A3228; pointer-events: none;
+  }
+  #title span { color: #8A6A3A; font-weight: 500; }
+  #hud {
+    position: fixed; right: 24px; bottom: 24px; z-index: 3;
+    min-width: 220px; max-width: 320px;
+    padding: 10px 13px 12px;
+    background: var(--card);
+    border: 1px solid rgba(90,70,48,0.18);
+    border-radius: 3px;
+    box-shadow: 1px 2px 0 rgba(90,70,48,0.06), 0 8px 18px rgba(80,60,40,0.06);
+    font-family: "Noto Serif CJK TC", "Noto Sans CJK TC", serif;
+    font-size: 12px; line-height: 1.55; color: #3A3228;
+    pointer-events: none;
+  }
+  #hud .k { color: #8A6A3A; letter-spacing: 0.14em; font-size: 10px; margin-bottom: 2px; }
+  #hud .v { color: #5A3E28; font-weight: 600; }
+  #legend {
+    position: fixed; left: 22px; bottom: 22px; z-index: 3;
+    max-width: 400px;
+    padding: 8px 10px 10px;
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    font-family: "Noto Serif CJK TC", "Noto Sans CJK TC", serif;
+    font-size: 11px; color: #7A6A58; letter-spacing: 0.04em;
+    line-height: 1.6;
+    pointer-events: none;
+  }
+  #legend .title {
+    color: #6A5848; letter-spacing: 0.12em; font-size: 10px; margin-bottom: 3px;
+  }
+</style>
+</head>
+<body>
+<canvas id="stage"></canvas>
+<div class="washi-fiber" aria-hidden="true"></div>
+<div id="title">Spacecho · <span>組織圖</span></div>
+<div id="hud">
+  <div class="k">紙箋</div>
+  <div id="tip">節點或邊 — 只顯示語意標籤</div>
+</div>
+<div id="legend">
+  <div class="title">圖例</div>
+  粒子 = 路上的任務 · 虛線 = 抄送／查核中轉<br>
+  圓形頭像 = 來源港口與隊員 · 幾何形只在無圖時使用
+</div>
+<script>
+(function () {
+  const canvas = document.getElementById("stage");
+  const ctx = canvas.getContext("2d");
+  const tip = document.getElementById("tip");
+  const dpr = Math.max(1, window.devicePixelRatio || 1);
+
+  const NODES = [
+    { id: "laoyan",  name: "老闆",   role: "中心",     cluster: "core",   color: "#e8c36a", r: 22 },
+    { id: "elowen",  name: "Elowen", role: "中樞",     cluster: "hub",    color: "#F5C542", r: 20, avatar: "avatars/elowen.svg" },
+    { id: "liora",   name: "Liora",  role: "審稿",     cluster: "review", color: "#4A8FE8", r: 15, avatar: "avatars/liora.svg" },
+    { id: "steris",  name: "Steris", role: "掃信",     cluster: "mail",   color: "#9AA3B2", r: 14, avatar: "avatars/steris.svg" },
+    { id: "marasi",  name: "Marasi", role: "掃信",     cluster: "mail",   color: "#9AA3B2", r: 14, avatar: "avatars/marasi.svg" },
+    { id: "navani",  name: "Navani", role: "研究員",   cluster: "research", color: "#8B6CFF", r: 14, avatar: "avatars/navani.svg" },
+    { id: "sazed",   name: "Sazed",  role: "研究員",   cluster: "research", color: "#A67C52", r: 14, avatar: "avatars/sazed.svg" },
+    { id: "shallan", name: "Shallan",role: "研究員",   cluster: "research", color: "#F08A3A", r: 14, avatar: "avatars/shallan.svg" },
+    { id: "kaladin", name: "Kaladin",role: "研究員",   cluster: "research", color: "#3CB87A", r: 14, avatar: "avatars/kaladin.svg" },
+    { id: "rock",    name: "Rock",   role: "研究員",   cluster: "research", color: "#3DB87A", r: 14, avatar: "avatars/rock.svg" },
+    { id: "dockson", name: "Dockson",role: "財務",     cluster: "finance", color: "#8B5E3C", r: 14, avatar: "avatars/dockson.svg" },
+    { id: "jasnah",  name: "Jasnah", role: "績效",     cluster: "finance", color: "#7B5CDB", r: 14, avatar: "avatars/jasnah.svg" },
+    { id: "nale",    name: "Nale",   role: "封鎖",     cluster: "mod",    color: "#3D4454", r: 14, avatar: "avatars/nale.svg" },
+    { id: "nazh",    name: "Nazh",   role: "視覺",     cluster: "viz",    color: "#3D7DD6", r: 14, avatar: "avatars/nazh.svg" },
+    { id: "sigzil",  name: "Sigzil", role: "日誌",     cluster: "log",    color: "#8A93A3", r: 13, avatar: "avatars/sigzil.svg" },
+    { id: "rushu",   name: "Rushu",  role: "模擬",     cluster: "sim",    color: "#2BB3A0", r: 14, avatar: "avatars/rushu.svg" },
+    { id: "wit",     name: "Wit",    role: "一招",     cluster: "wit",    color: "#E8D5A8", r: 13, avatar: "avatars/wit.svg" },
+    { id: "ranette", name: "Ranette",role: "網頁",     cluster: "web",    color: "#3EC8D0", r: 15, avatar: "avatars/ranette.svg" },
+    { id: "boss_talk", name: "老闆對話", role: "來源", cluster: "source", color: "#e8c36a", r: 10, kind: "source", avatar: "avatars/src-talk.png" },
+    { id: "photos",    name: "相簿／macOS 照片", role: "來源", cluster: "source", color: "#9ad4c8", r: 10, kind: "source", avatar: "avatars/src-photos.png" },
+    { id: "gmail_saghm", name: "Gmail（0xsaghm）", role: "來源", cluster: "source", color: "#6aa8ff", r: 10, kind: "source", avatar: "avatars/src-gmail.png" },
+    { id: "gmail_zoland", name: "Gmail（zoland1206）", role: "來源", cluster: "source", color: "#6aa8ff", r: 10, kind: "source", avatar: "avatars/src-gmail.png" },
+    { id: "himalaya",  name: "Himalaya", role: "來源", cluster: "source", color: "#8cb8ff", r: 10, kind: "source", avatar: "avatars/src-himalaya.png" },
+    { id: "xfeed",     name: "X", role: "來源", cluster: "source", color: "#c5cdd8", r: 11, kind: "source", avatar: "avatars/src-x.png" },
+    { id: "finnews",   name: "財經／產業新聞", role: "來源", cluster: "source", color: "#7dffb3", r: 11, kind: "source", avatar: "avatars/src-finnews.png" },
+    { id: "news_check",name: "新聞／原始來源", role: "來源", cluster: "source", color: "#b48cff", r: 10, kind: "source", avatar: "avatars/src-news.png" },
+    { id: "sinopac",   name: "永豐", role: "來源", cluster: "source", color: "#d4c08a", r: 10, kind: "source", avatar: "avatars/src-sinopac.png" },
+    { id: "fubon",     name: "富邦", role: "來源", cluster: "source", color: "#d4c08a", r: 10, kind: "source", avatar: "avatars/src-fubon.png" },
+    { id: "ctbc",      name: "中信", role: "來源", cluster: "source", color: "#d4c08a", r: 10, kind: "source", avatar: "avatars/src-ctbc.png" },
+    { id: "nextbank",  name: "將來", role: "來源", cluster: "source", color: "#d4c08a", r: 10, kind: "source", avatar: "avatars/src-nextbank.png" },
+    { id: "gdrive",    name: "Google Drive", role: "來源", cluster: "source", color: "#6ec8a0", r: 10, kind: "source", avatar: "avatars/src-drive.png" },
+    { id: "broker",    name: "券商檔（對帳）", role: "來源", cluster: "source", color: "#c8b078", r: 10, kind: "source", avatar: "avatars/src-broker.png" },
+    { id: "ibkr",      name: "IBKR／Sheet Portfolio", role: "來源", cluster: "source", color: "#8eb0d8", r: 10, kind: "source", avatar: "avatars/src-ibkr.png" },
+    { id: "paperpx",   name: "公開市價／紙上", role: "來源", cluster: "source", color: "#7ec8ff", r: 10, kind: "source", avatar: "avatars/src-paper.png" },
+    { id: "ds_lab",    name: "資料分析／資料科學站", role: "來源", cluster: "source", color: "#c9a0ff", r: 10, kind: "source", avatar: "avatars/src-dslab.png" },
+    { id: "community", name: "Grok Bot 社群", role: "來源", cluster: "source", color: "#f0e6c8", r: 10, kind: "source", avatar: "avatars/src-community.png" },
+    { id: "heptabase", name: "本機 Heptabase", role: "來源", cluster: "source", color: "#8ea0b8", r: 10, kind: "source", avatar: "avatars/src-heptabase.png" },
+    { id: "github",    name: "GitHub", role: "來源", cluster: "source", color: "#a8b4c4", r: 10, kind: "source", avatar: "avatars/src-github.png" },
+    { id: "localrepo", name: "本機／repo", role: "來源", cluster: "source", color: "#5ce1e6", r: 10, kind: "source", avatar: "avatars/src-localrepo.png" },
+  ];
+
+  const RESEARCHERS = ["navani", "sazed", "shallan", "kaladin", "rock"];
+
+  const EDGES = [
+    { from: "laoyan", to: "elowen", label: "任務、決策、核准" },
+    { from: "elowen", to: "laoyan", label: "收成、早報、突發、待核准" },
+    { from: "elowen", to: "liora",  label: "審稿" },
+    { from: "liora",  to: "elowen", label: "判定" },
+    { from: "elowen", to: "laoyan", label: "產業突發", note: "抄 Liora", dashed: true },
+    { from: "elowen", to: "steris", label: "0xsaghm 掃信" },
+    { from: "steris", to: "elowen", label: "重要信摘要" },
+    { from: "elowen", to: "marasi", label: "zoland 掃信" },
+    { from: "marasi", to: "elowen", label: "重要信摘要" },
+    ...RESEARCHERS.map(id => ({ from: "elowen", to: id, label: "產業派工" })),
+    ...RESEARCHERS.map(id => ({ from: id, to: "elowen", label: "產業稿、突發" })),
+    { from: "elowen", to: "liora",  label: "查核", note: "經 Elowen 中轉", dashed: true },
+    { from: "elowen", to: "dockson", label: "財務對帳（唯讀）" },
+    { from: "dockson", to: "elowen", label: "對帳結果" },
+    { from: "elowen", to: "jasnah", label: "績效" },
+    { from: "jasnah", to: "elowen", label: "績效數字" },
+    { from: "elowen", to: "nale", label: "X 封鎖" },
+    { from: "nale", to: "elowen", label: "批次結果" },
+    { from: "nale", to: "laoyan", label: "封鎖（自己對話）" },
+    { from: "elowen", to: "nazh", label: "叫醒去挖" },
+    { from: "nazh", to: "laoyan", label: "視覺課" },
+    { from: "nazh", to: "elowen", label: "邊／視覺" },
+    { from: "elowen", to: "sigzil", label: "日誌指令" },
+    { from: "sigzil", to: "laoyan", label: "日誌" },
+    { from: "elowen", to: "rushu", label: "模擬（早報才叫）" },
+    { from: "rushu", to: "liora", label: "價、收盤、推論審核" },
+    { from: "rushu", to: "elowen", label: "被叫晈交模擬" },
+    { from: "wit", to: "laoyan", label: "每日一招" },
+    { from: "elowen", to: "ranette", label: "網頁派工" },
+    { from: "ranette", to: "elowen", label: "網址、改版" },
+    { from: "ranette", to: "laoyan", label: "上線網址" },
+    { from: "boss_talk", to: "elowen", label: "對話摘要" },
+    { from: "photos", to: "elowen", label: "相簿索引" },
+    { from: "gmail_saghm", to: "steris", label: "信箱掃讀" },
+    { from: "himalaya", to: "steris", label: "音訊／節目" },
+    { from: "gmail_zoland", to: "marasi", label: "信箱掃讀" },
+    { from: "himalaya", to: "marasi", label: "音訊／節目" },
+    { from: "xfeed", to: "liora", label: "查核", dashed: true },
+    { from: "news_check", to: "liora", label: "原始來源查核" },
+    { from: "finnews", to: "liora", label: "查核（產業）", dashed: true },
+    { from: "xfeed", to: "navani",  label: "AI伺服器" },
+    { from: "finnews", to: "navani", label: "AI伺服器" },
+    { from: "xfeed", to: "sazed",   label: "記憶體" },
+    { from: "finnews", to: "sazed",  label: "記憶體" },
+    { from: "xfeed", to: "shallan", label: "光通" },
+    { from: "finnews", to: "shallan",label: "光通" },
+    { from: "xfeed", to: "kaladin", label: "無人機" },
+    { from: "finnews", to: "kaladin",label: "無人機" },
+    { from: "xfeed", to: "rock",    label: "PSI" },
+    { from: "finnews", to: "rock",   label: "PSI" },
+    { from: "sinopac", to: "dockson", label: "信用卡／帳戶唯讀" },
+    { from: "fubon", to: "dockson", label: "信用卡／帳戶唯讀" },
+    { from: "ctbc", to: "dockson", label: "信用卡／帳戶唯讀" },
+    { from: "nextbank", to: "dockson", label: "信用卡／帳戶唯讀" },
+    { from: "gdrive", to: "dockson", label: "對帳／檔案唯讀" },
+    { from: "broker", to: "dockson", label: "券商對帳檔" },
+    { from: "ibkr", to: "jasnah", label: "持倉與績效" },
+    { from: "paperpx", to: "rushu", label: "紙上／公開價" },
+    { from: "xfeed", to: "nale", label: "桌面辨識" },
+    { from: "xfeed", to: "nazh", label: "社群訊號" },
+    { from: "ds_lab", to: "nazh", label: "分析站" },
+    { from: "community", to: "wit", label: "社群用法" },
+    { from: "heptabase", to: "sigzil", label: "本機筆記" },
+    { from: "github", to: "sigzil", label: "倉庫活動" },
+    { from: "localrepo", to: "ranette", label: "本機程式檔" },
+  ];
+
+  const CLUSTERS = [
+    { label: "研究", x: 0.78, y: 0.38, color: "#7dffb3", rx: 0.62, ry: 0.26, rw: 0.30, rh: 0.46 },
+    { label: "信件", x: 0.22, y: 0.34, color: "#6aa8ff", rx: 0.14, ry: 0.26, rw: 0.20, rh: 0.30 },
+    { label: "財務", x: 0.42, y: 0.78, color: "#ffb347", rx: 0.30, ry: 0.68, rw: 0.28, rh: 0.22 },
+    { label: "外部來源", x: 0.08, y: 0.08, color: "#d4c08a" },
+  ];
+
+  const byId = Object.fromEntries(NODES.map(n => [n.id, n]));
+
+  const LAYOUT = {
+    laoyan:  [0.50, 0.22],
+    elowen:  [0.48, 0.50],
+    liora:   [0.38, 0.62],
+    rushu:   [0.28, 0.56],
+    steris:  [0.22, 0.36],
+    marasi:  [0.24, 0.48],
+    navani:  [0.72, 0.34],
+    sazed:   [0.78, 0.46],
+    shallan: [0.76, 0.58],
+    kaladin: [0.68, 0.66],
+    rock:    [0.64, 0.48],
+    dockson: [0.36, 0.76],
+    jasnah:  [0.50, 0.78],
+    nale:    [0.62, 0.76],
+    nazh:    [0.64, 0.22],
+    sigzil:  [0.36, 0.34],
+    wit:     [0.38, 0.18],
+    ranette: [0.58, 0.34],
+    boss_talk: [0.50, 0.06],
+    photos:    [0.40, 0.07],
+    gmail_saghm:  [0.06, 0.30],
+    gmail_zoland: [0.06, 0.44],
+    himalaya:     [0.07, 0.56],
+    sinopac:  [0.08, 0.78],
+    fubon:    [0.16, 0.88],
+    ctbc:     [0.26, 0.92],
+    nextbank: [0.36, 0.94],
+    gdrive:   [0.18, 0.78],
+    broker:   [0.28, 0.86],
+    ibkr:     [0.50, 0.94],
+    paperpx:  [0.18, 0.66],
+    xfeed:    [0.94, 0.18],
+    finnews:  [0.94, 0.50],
+    news_check:[0.20, 0.18],
+    ds_lab:    [0.80, 0.10],
+    community: [0.26, 0.08],
+    heptabase: [0.08, 0.16],
+    github:    [0.16, 0.10],
+    localrepo: [0.70, 0.10],
+  };
+
+  const HUBS = new Set(["elowen"]);
+
+  function loadAvatar(n) {
+    const src = n.avatar || n.srcIcon;
+    if (!src) return;
+    const img = new Image();
+    img.onload = () => { n._img = img; };
+    img.src = src;
+  }
+  NODES.forEach(loadAvatar);
+
+  let W = 0, H = 0, hover = null;
+  const STARS = Array.from({ length: 70 }, () => ({
+    x: Math.random(),
+    y: Math.random(),
+    r: 0.2 + Math.random() * 0.45,
+    a: 0.03 + Math.random() * 0.05,
+  }));
+
+  function resize() {
+    W = window.innerWidth; H = window.innerHeight;
+    canvas.width = Math.floor(W * dpr);
+    canvas.height = Math.floor(H * dpr);
+    canvas.style.width = W + "px";
+    canvas.style.height = H + "px";
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    NODES.forEach(n => {
+      const [ux, uy] = LAYOUT[n.id];
+      n.x = ux * W;
+      n.y = uy * H;
+    });
+    EDGES.forEach(prepEdge);
+  }
+
+  function pairKey(a, b) {
+    return a < b ? a + "|" + b : b + "|" + a;
+  }
+
+  const pairCount = {};
+  EDGES.forEach(e => {
+    const k = pairKey(e.from, e.to);
+    pairCount[k] = (pairCount[k] || 0) + 1;
+    e._pairIndex = pairCount[k] - 1;
+  });
+  const pairTotal = {};
+  EDGES.forEach(e => {
+    const k = pairKey(e.from, e.to);
+    pairTotal[k] = (pairTotal[k] || 0) + 1;
+  });
+
+  function hubBoost(e) {
+    return HUBS.has(e.from) || HUBS.has(e.to);
+  }
+
+  function prepEdge(e) {
+    const a = byId[e.from], b = byId[e.to];
+    const k = pairKey(e.from, e.to);
+    const n = pairTotal[k];
+    const i = e._pairIndex;
+    const dx = b.x - a.x, dy = b.y - a.y;
+    const len = Math.hypot(dx, dy) || 1;
+    const nx = -dy / len, ny = dx / len;
+    const spread = n === 1 ? 0 : (i - (n - 1) / 2) * 28;
+    const bow = (e.from < e.to ? 1 : -1) * (36 + Math.abs(spread));
+    e.x1 = a.x; e.y1 = a.y; e.x2 = b.x; e.y2 = b.y;
+    e.cx = (a.x + b.x) / 2 + nx * (bow + spread);
+    e.cy = (a.y + b.y) / 2 + ny * (bow + spread);
+    e.color = a.color;
+    e.particles = [];
+  }
+
+  const _qp = { x: 0, y: 0 };
+  const _qt = { x: 0, y: 0 };
+
+  const LIVE_SLOTS = 6;
+  const SLOT_HOLD_MS = 4200;
+  const LIVE = Array.from({ length: LIVE_SLOTS }, (_, i) => ({
+    edge: EDGES[i % EDGES.length],
+    t: (i / LIVE_SLOTS + 0.13) % 1,
+    speed: 0.00011 + (i % 3) * 0.000018,
+    until: 0,
+  }));
+  function pickLiveEdge(slot, now, avoid) {
+    const n = EDGES.length;
+    let idx = (Math.floor(now / 97) + slot * 11) % n;
+    for (let k = 0; k < n; k++) {
+      const e = EDGES[(idx + k) % n];
+      if (e !== avoid && !LIVE.some(s => s !== LIVE[slot] && s.edge === e)) {
+        return e;
+      }
+    }
+    return EDGES[idx];
+  }
+  function tickLive(now) {
+    for (let i = 0; i < LIVE.length; i++) {
+      const s = LIVE[i];
+      if (now >= s.until) {
+        const prev = s.edge;
+        s.edge = pickLiveEdge(i, now, prev);
+        s.t = Math.random() * 0.15;
+        s.speed = 0.00010 + Math.random() * 0.00004;
+        s.until = now + SLOT_HOLD_MS + (i * 180);
+      }
+    }
+  }
+
+  function qpoint(e, t, out) {
+    const u = 1 - t;
+    const o = out || _qp;
+    o.x = u * u * e.x1 + 2 * u * t * e.cx + t * t * e.x2;
+    o.y = u * u * e.y1 + 2 * u * t * e.cy + t * t * e.y2;
+    return o;
+  }
+
+  function qtangent(e, t, out) {
+    const o = out || _qt;
+    const dx = 2 * (1 - t) * (e.cx - e.x1) + 2 * t * (e.x2 - e.cx);
+    const dy = 2 * (1 - t) * (e.cy - e.y1) + 2 * t * (e.y2 - e.cy);
+    const len = Math.hypot(dx, dy) || 1;
+    o.x = dx / len;
+    o.y = dy / len;
+    return o;
+  }
+
+  function distToQuad(e, px, py) {
+    let best = 1e9;
+    for (let i = 0; i <= 24; i++) {
+      const p = qpoint(e, i / 24);
+      const d = Math.hypot(p.x - px, p.y - py);
+      if (d < best) best = d;
+    }
+    return best;
+  }
+
+  function drawSpace() {
+    ctx.fillStyle = "#F6F0E6";
+    ctx.fillRect(0, 0, W, H);
+    const wash = ctx.createRadialGradient(W * 0.48, H * 0.38, 40, W * 0.5, H * 0.5, Math.max(W, H) * 0.78);
+    wash.addColorStop(0, "rgba(255, 248, 236, 0.55)");
+    wash.addColorStop(0.55, "rgba(246, 240, 230, 0.15)");
+    wash.addColorStop(1, "rgba(232, 220, 200, 0.45)");
+    ctx.fillStyle = wash;
+    ctx.fillRect(0, 0, W, H);
+    for (const s of STARS) {
+      ctx.fillStyle = `rgba(120,95,70,${s.a})`;
+      ctx.fillRect(s.x * W, s.y * H, s.r < 0.35 ? 4 : 1, s.r < 0.35 ? 1 : 3);
+    }
+  }
+
+  function drawClusters() {
+    ctx.save();
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.font = '12px "Noto Serif CJK TC","Noto Sans CJK TC","Noto Sans CJK SC",serif';
+    ctx.letterSpacing = "0.18em";
+    for (const c of CLUSTERS) {
+      ctx.fillStyle = "rgba(90, 74, 58, 0.38)";
+      ctx.fillText(c.label, c.x * W, c.y * H);
+    }
+    ctx.restore();
+  }
+
+  function edgeFocus(e) {
+    if (!hover) return "normal";
+    if (hover.type === "edge") return hover.e === e ? "hot" : "dim";
+    if (hover.type === "node") {
+      return (e.from === hover.n.id || e.to === hover.n.id) ? "hot" : "dim";
+    }
+    return "normal";
+  }
+
+  function drawArrow(e, alpha) {
+    const dest = byId[e.to];
+    const t = Math.max(0.82, 1 - (dest.r + 10) / 220);
+    const p = qpoint(e, t);
+    const tan = qtangent(e, t);
+    const size = 8.5;
+    const backx = p.x - tan.x * size;
+    const backy = p.y - tan.y * size;
+    const lx = -tan.y, ly = tan.x;
+    ctx.beginPath();
+    ctx.moveTo(p.x + tan.x * 2, p.y + tan.y * 2);
+    ctx.lineTo(backx + lx * size * 0.55, backy + ly * size * 0.55);
+    ctx.lineTo(backx - lx * size * 0.55, backy - ly * size * 0.55);
+    ctx.closePath();
+    ctx.fillStyle = hexA(e.color, alpha);
+    ctx.fill();
+  }
+
+  function drawEdge(e, mode) {
+    const hot = mode === "hot";
+    const dim = mode === "dim";
+    const gray = hot ? "rgba(92,68,48,0.88)" : dim ? "rgba(120,96,72,0.10)" : (e.dashed ? "rgba(120,88,62,0.42)" : "rgba(110,82,58,0.36)");
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(e.x1, e.y1);
+    ctx.quadraticCurveTo(e.cx, e.cy, e.x2, e.y2);
+    ctx.strokeStyle = gray;
+    ctx.lineWidth = hot ? 1.35 : 0.9;
+    ctx.shadowBlur = 0;
+    ctx.globalAlpha = 1;
+    ctx.setLineDash(e.dashed ? [3.5, 5.5] : [2.5, 4.5]);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.restore();
+  }
+
+  function drawLiveParticles(dt, now) {
+    tickLive(now);
+    for (const s of LIVE) {
+      const e = s.edge;
+      const mode = edgeFocus(e);
+      const dim = mode === "dim";
+      const hot = mode === "hot";
+      const gain = dim ? 0.35 : hot ? 1 : 0.92;
+      s.t += s.speed * dt;
+      if (s.t >= 1) {
+        s.t -= Math.floor(s.t);
+        s.edge = pickLiveEdge(LIVE.indexOf(s), now, e);
+        s.until = now + SLOT_HOLD_MS;
+      }
+      const pt = qpoint(s.edge, s.t, _qp);
+      const terra = "#C46A4A";
+      ctx.fillStyle = hexA(terra, 0.12 * gain);
+      ctx.beginPath();
+      ctx.arc(pt.x, pt.y, 3.2, 0, Math.PI * 2);
+      ctx.fill();
+      const half = 2.4;
+      ctx.fillStyle = hexA(terra, 0.86 * gain);
+      ctx.beginPath();
+      ctx.arc(pt.x, pt.y, half, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  function nodeFocus(n) {
+    if (!hover) return "normal";
+    if (hover.type === "node") return hover.n === n ? "hot" : "soft";
+    if (hover.type === "edge") {
+      return (hover.e.from === n.id || hover.e.to === n.id) ? "hot" : "soft";
+    }
+    return "normal";
+  }
+
+  function drawSourceShape(n, r) {
+    const s = n.shape || "diamond";
+    ctx.beginPath();
+    if (s === "square") {
+      const h = r * 0.86;
+      ctx.rect(n.x - h, n.y - h, h * 2, h * 2);
+    } else if (s === "ring") {
+      ctx.arc(n.x, n.y, r, 0, Math.PI * 2);
+    } else {
+      ctx.moveTo(n.x, n.y - r);
+      ctx.lineTo(n.x + r, n.y);
+      ctx.lineTo(n.x, n.y + r);
+      ctx.lineTo(n.x - r, n.y);
+      ctx.closePath();
+    }
+  }
+
+  function drawNode(n, mode) {
+    const hot = mode === "hot";
+    const src = n.kind === "source";
+    ctx.save();
+    if (mode === "soft") ctx.globalAlpha = 0.48;
+    ctx.shadowColor = "rgba(90,70,48,0.12)";
+    ctx.shadowBlur = hot ? 4 : 0;
+    ctx.fillStyle = hexA(n.color, src ? 0.08 : 0.12);
+    if (src && n._img) {
+      const s = n.r * 2.15;
+      ctx.beginPath();
+      ctx.arc(n.x, n.y, n.r + 3, 0, Math.PI * 2);
+      ctx.fillStyle = hexA(n.color, 0.14);
+      ctx.fill();
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(n.x, n.y, n.r, 0, Math.PI * 2);
+      ctx.clip();
+      ctx.drawImage(n._img, n.x - s / 2, n.y - s / 2, s, s);
+      ctx.restore();
+      ctx.beginPath();
+      ctx.arc(n.x, n.y, n.r, 0, Math.PI * 2);
+      ctx.lineWidth = 1.4;
+      ctx.strokeStyle = n.color;
+      ctx.stroke();
+    } else if (src) {
+      drawSourceShape(n, n.r + 8);
+      ctx.fill();
+      ctx.fillStyle = "#F6F0E6";
+      drawSourceShape(n, n.r);
+      if (n.shape === "ring") {
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(n.x, n.y, n.r - 4.2, 0, Math.PI * 2);
+        ctx.fillStyle = "#F6F0E6";
+        ctx.fill();
+      } else {
+        ctx.fill();
+      }
+      ctx.lineWidth = 1.45;
+      ctx.strokeStyle = n.color;
+      drawSourceShape(n, n.r);
+      ctx.stroke();
+    } else if (n.id === "laoyan") {
+      ctx.beginPath();
+      ctx.arc(n.x, n.y, n.r + 3, 0, Math.PI * 2);
+      ctx.fillStyle = "rgba(196,138,58,0.14)";
+      ctx.fill();
+      ctx.fillStyle = "#C48A3A";
+      ctx.beginPath();
+      ctx.arc(n.x, n.y, n.r - 2, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.lineWidth = 1.4;
+      ctx.strokeStyle = "#8A5A22";
+      ctx.stroke();
+    } else {
+      const s = n.r * 2.15;
+      if (n._img) {
+        ctx.drawImage(n._img, n.x - s / 2, n.y - s / 2, s, s);
+      } else {
+        ctx.beginPath();
+        ctx.arc(n.x, n.y, n.r, 0, Math.PI * 2);
+        ctx.fillStyle = n.color;
+        ctx.fill();
+      }
+    }
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = "#2C241C";
+    ctx.font = (n.id === "laoyan" || n.id === "elowen" ? "600 13px " : "500 12px ") +
+      '"Noto Serif CJK TC","Noto Sans CJK TC",serif';
+    ctx.textAlign = "center";
+    ctx.textBaseline = "top";
+    ctx.fillText(n.name, n.x, n.y + n.r + 8);
+    ctx.fillStyle = "#5A4636";
+    ctx.font = '10px "Noto Serif CJK TC","Noto Sans CJK TC","Noto Sans CJK SC",serif';
+    ctx.fillText(n.role, n.x, n.y + n.r + 24);
+    ctx.restore();
+  }
+
+  const _hexRGB = {};
+  const _hexA = {};
+  function hexA(hex, a) {
+    let rgb = _hexRGB[hex];
+    if (!rgb) {
+      const h = hex.replace("#", "");
+      rgb = _hexRGB[hex] = [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16)];
+    }
+    const key = hex + "|" + (a * 1000 | 0);
+    let s = _hexA[key];
+    if (!s) s = _hexA[key] = `rgba(${rgb[0]},${rgb[1]},${rgb[2]},${a})`;
+    return s;
+  }
+
+  function hit(mx, my) {
+    for (const n of NODES) {
+      if (Math.hypot(mx - n.x, my - n.y) <= n.r + 10) return { type: "node", n };
+    }
+    let best = null, bd = 10;
+    for (const e of EDGES) {
+      const d = distToQuad(e, mx, my);
+      if (d < bd) { bd = d; best = e; }
+    }
+    if (best) return { type: "edge", e: best };
+    return null;
+  }
+
+  canvas.addEventListener("mousemove", ev => {
+    const r = canvas.getBoundingClientRect();
+    hover = hit(ev.clientX - r.left, ev.clientY - r.top);
+    if (!hover) {
+      tip.innerHTML = "節點或邊 — 只顯示語意標籤";
+    } else if (hover.type === "node") {
+      const outs = EDGES.filter(e => e.from === hover.n.id).map(e => e.label);
+      tip.innerHTML = `<span class="v">${hover.n.name}</span> · ${hover.n.role}<br>${outs.slice(0, 4).join(" · ") || "—"}`;
+    } else {
+      const a = byId[hover.e.from], b = byId[hover.e.to];
+      const extra = hover.e.note ? ` · ${hover.e.note}` : "";
+      tip.innerHTML = `<span class="v">${a.name} → ${b.name}</span><br>${hover.e.label}${extra}`;
+    }
+  });
+  canvas.addEventListener("mouseleave", () => {
+    hover = null;
+    tip.innerHTML = "節點或邊 — 只顯示語意標籤";
+  });
+
+  let lastNow = performance.now();
+  function frame(now) {
+    let dt = now - lastNow;
+    lastNow = now;
+    if (dt > 33) dt = 33;
+    drawSpace();
+    drawClusters();
+    EDGES.forEach(e => drawEdge(e, edgeFocus(e)));
+    drawLiveParticles(dt, now);
+    NODES.forEach(n => drawNode(n, nodeFocus(n)));
+    requestAnimationFrame(frame);
+  }
+
+  window.addEventListener("resize", resize);
+  resize();
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
