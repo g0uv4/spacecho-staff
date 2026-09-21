@@ -171,15 +171,6 @@ window.SPACECHO_ORG = {
       "avatar": "avatars/nale.svg"
     },
     {
-      "id": "ranette",
-      "name": "拉內特",
-      "role": "網頁",
-      "cluster": "web",
-      "color": "#3EC8D0",
-      "r": 15,
-      "avatar": "avatars/ranette.svg"
-    },
-    {
       "id": "wit",
       "name": "機智",
       "role": "Grok Bot 每日一招",
@@ -1012,21 +1003,6 @@ window.SPACECHO_ORG = {
     },
     {
       "from": "elowen",
-      "to": "ranette",
-      "label": "網頁派工"
-    },
-    {
-      "from": "ranette",
-      "to": "elowen",
-      "label": "網址、改版"
-    },
-    {
-      "from": "localrepo",
-      "to": "ranette",
-      "label": "本機程式檔"
-    },
-    {
-      "from": "elowen",
       "to": "wit",
       "label": "每日一招調度"
     },
@@ -1152,11 +1128,6 @@ window.SPACECHO_ORG = {
     },
     {
       "from": "teft",
-      "to": "career_sync",
-      "label": "成員"
-    },
-    {
-      "from": "ranette",
       "to": "career_sync",
       "label": "成員"
     },
@@ -1306,10 +1277,6 @@ window.SPACECHO_ORG = {
     "wit": [
       0.38,
       0.18
-    ],
-    "ranette": [
-      0.58,
-      0.34
     ],
     "rutin": [
       0.56,
