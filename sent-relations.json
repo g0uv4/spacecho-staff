@@ -1,0 +1,9 @@
+{
+  "edges": [
+    {
+      "from": "gmail_saghm",
+      "to": "ranette",
+      "label": "測試繁中儲存關係"
+    }
+  ]
+}

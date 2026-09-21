@@ -1,0 +1,35 @@
+{"at":"2026-08-21T09:12:00+08:00","from":"Elowen","to":"老闆","label":"示例 · 轉交摘要","sample":true}
+{"at":"2026-08-22T16:40:00+08:00","from":"Liora","to":"Elowen","label":"示例 · 點對點投遞","sample":true}
+{"at":"2026-08-24T10:05:00+08:00","from":"Ranette","to":"Liora","label":"示例 · 審稿交接","sample":true}
+{"at": "2026-08-24T08:03:00+08:00", "from": "Elowen", "to": "老闆", "label": "市場題材早報"}
+{"at": "2026-08-24T10:25:00+08:00", "from": "Nazh", "to": "老闆", "label": "hexbin 課"}
+{"at": "2026-08-24T10:40:00+08:00", "from": "Nazh", "to": "老闆", "label": "日曆熱力課"}
+{"at": "2026-08-24T13:11:00+08:00", "from": "Ranette", "to": "Elowen", "label": "組織圖上線"}
+{"at": "2026-08-24T13:42:00+08:00", "from": "Ranette", "to": "Elowen", "label": "外源圖補回"}
+{"at": "2026-08-24T16:25:00+08:00", "from": "Nazh", "to": "老闆", "label": "密度等高線課"}
+{"at": "2026-08-24T16:36:00+08:00", "from": "Elowen", "to": "Ranette", "label": "要求打卡後端"}
+{"at": "2026-08-24T16:39:48+08:00", "from": "Jasnah", "to": "Elowen", "label": "平日績效監督"}
+{"at": "2026-08-24T16:43:53+08:00", "from": "Ranette", "to": "Elowen", "label": "打卡API上線"}
+{"at": "2026-08-24T17:25:27+08:00", "from": "Elowen", "to": "老闆", "label": "招 Dalinar 軍工"}
+{"at": "2026-08-25T08:04:38+08:00", "from": "Steris", "to": "Elowen", "label": "財報狗新刊"}
+{"at": "2026-08-25T08:06:47+08:00", "from": "Elowen", "to": "Sazed", "label": "早報記憶體核稿"}
+{"at": "2026-08-25T08:08:28+08:00", "from": "Sazed", "to": "Elowen", "label": "早報記憶體核完"}
+{"at": "2026-09-01T08:23:16+08:00", "from": "elowen", "to": "boss", "label": "市場早報"}
+{"at": "2026-09-02T08:06:49+08:00", "from": "elowen", "to": "boss", "label": "財報狗篩"}
+{"at": "2026-09-02T08:13:14+08:00", "from": "elowen", "to": "boss", "label": "市場早報"}
+{"at": "2026-09-02T09:48:33+08:00", "from": "elowen", "to": "boss", "label": "寫行事曆"}
+{"at": "2026-09-02T09:55:45+08:00", "from": "elowen", "to": "ranette", "label": "rutin jinchang"}
+{"at": "2026-09-02T09:58:36+08:00", "from": "ranette", "to": "elowen", "label": "rutin shangtu"}
+{"at": "2026-09-02T10:09:02+08:00", "from": "elowen", "to": "ranette", "label": "rutin gaiwenyang"}
+{"at": "2026-09-02T10:10:42+08:00", "from": "ranette", "to": "elowen", "label": "wenyang shangtu"}
+{"at": "2026-09-02T11:04:06+08:00", "from": "elowen", "to": "ranette", "label": "wenyang gaituyang"}
+{"at": "2026-09-02T11:06:01+08:00", "from": "ranette", "to": "elowen", "label": "tuyang shangtu"}
+{"at": "2026-09-02T14:57:45+08:00", "from": "elowen", "to": "boss", "label": "task tool 建議"}
+{"at": "2026-09-03T08:05:03+08:00", "from": "elowen", "to": "boss", "label": "市場早報"}
+{"at": "2026-09-03T08:05:16+08:00", "from": "elowen", "to": "boss", "label": "財報狗篩"}
+{"at": "2026-09-04T01:51:36+08:00", "from": "elowen", "to": "fenli", "label": "字幕派工"}
+{"at": "2026-09-04T02:06:18+08:00", "from": "elowen", "to": "fenli", "label": "字幕進房核准"}
+{"at": "2026-09-04T02:12:22+08:00", "from": "elowen", "to": "teft", "label": "teft jinchang"}
+{"at": "2026-09-04T02:12:22+08:00", "from": "elowen", "to": "ranette", "label": "teft jinchang"}
+{"at": "2026-09-04T02:14:18+08:00", "from": "ranette", "to": "elowen", "label": "teft shangtu"}
+{"at": "2026-09-04T02:15:29+08:00", "from": "teft", "to": "boss", "label": "職涯進度表"}

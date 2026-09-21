@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Spacecho · 打卡</title>
+<style>
+  :root {
+    --bg: #F6F0E6;
+    --ink: #3A3228;
+    --dim: #7A6A58;
+    --paper: #F6F0E6;
+    --card: #FBF6EC;
+    --edge: #8B6F55;
+    --gold: #C48A3A;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    min-height: 100%; background: var(--bg); color: var(--ink);
+    font-family: "Noto Serif CJK TC", "Noto Sans CJK TC", "Noto Sans CJK SC", serif;
+  }
+  .washi-fiber {
+    position: fixed; inset: 0; z-index: 0; pointer-events: none;
+    background:
+      repeating-linear-gradient(92deg, rgba(90,70,50,0.018) 0 1px, transparent 1px 7px),
+      repeating-linear-gradient(8deg, rgba(70,55,40,0.012) 0 1px, transparent 1px 11px);
+  }
+  header {
+    position: relative; z-index: 1;
+    padding: 22px 24px 8px;
+    display: flex; align-items: baseline; justify-content: space-between; gap: 12px;
+  }
+  h1 {
+    font-size: 15px; font-weight: 600; letter-spacing: 0.06em;
+  }
+  h1 span { color: #8A6A3A; font-weight: 500; }
+  .paper-btn {
+    font-family: inherit; font-size: 12px; letter-spacing: 0.08em;
+    color: #3A3228; background: var(--card);
+    border: 1px solid rgba(90,70,48,0.22);
+    border-radius: 3px; padding: 6px 11px;
+    box-shadow: 1px 2px 0 rgba(90,70,48,0.06);
+    text-decoration: none; display: inline-block;
+  }
+  .paper-btn:hover { background: #F3E8D4; }
+  main {
+    position: relative; z-index: 1;
+    padding: 10px 24px 40px;
+    display: grid;
+    grid-template-columns: minmax(280px, 420px) minmax(260px, 1fr);
+    gap: 18px;
+    align-items: start;
+  }
+  .card {
+    background: var(--card);
+    border: 1px solid rgba(90,70,48,0.18);
+    border-radius: 3px;
+    box-shadow: 1px 2px 0 rgba(90,70,48,0.06), 0 8px 18px rgba(80,60,40,0.06);
+    padding: 12px 14px 14px;
+  }
+  .k { color: #8A6A3A; letter-spacing: 0.14em; font-size: 10px; margin-bottom: 8px; }
+  .cal-nav {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 10px; font-size: 13px;
+  }
+  .cal-nav button {
+    font-family: inherit; font-size: 12px; color: #3A3228;
+    background: #F6F0E6; border: 1px solid rgba(90,70,48,0.18);
+    border-radius: 3px; padding: 3px 8px; cursor: pointer;
+  }
+  .dow, .grid {
+    display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px;
+  }
+  .dow span {
+    text-align: center; font-size: 10px; letter-spacing: 0.08em; color: #8A6A3A; padding: 4px 0;
+  }
+  .day {
+    min-height: 46px; padding: 4px 5px 6px;
+    background: #F6F0E6; border: 1px solid transparent;
+    border-radius: 3px; cursor: pointer; text-align: left;
+  }
+  .day.empty { background: transparent; cursor: default; }
+  .day .n { font-size: 12px; color: #5A3E28; }
+  .day .who { font-size: 10px; color: #7A6A58; line-height: 1.35; margin-top: 2px; }
+  .day.has { border-color: rgba(139,111,85,0.28); background: #F3E8D4; }
+  .day.sel { outline: 1px solid #C48A3A; }
+  .day.out { opacity: 0.35; }
+  .empty-state { color: #7A6A58; font-size: 13px; line-height: 1.7; padding: 8px 2px 4px; }
+  .tl { list-style: none; }
+  .tl li {
+    display: grid; grid-template-columns: 48px 1fr;
+    gap: 10px; padding: 8px 0;
+    border-bottom: 1px dashed rgba(90,70,48,0.14);
+    font-size: 13px;
+  }
+  .tl time { color: #8A6A3A; font-variant-numeric: tabular-nums; }
+  .badge {
+    display: inline-block; font-size: 10px; letter-spacing: 0.1em;
+    color: #8A6A3A; border: 1px solid rgba(138,106,58,0.35);
+    padding: 0 5px; margin-left: 6px; border-radius: 2px;
+  }
+  .note { margin-top: 10px; font-size: 11px; color: #7A6A58; line-height: 1.6; }
+  @media (max-width: 760px) {
+    main { grid-template-columns: 1fr; padding: 10px 14px 32px; }
+    header { padding: 18px 14px 6px; }
+  }
+</style>
+</head>
+<body>
+<div class="washi-fiber" aria-hidden="true"></div>
+<header>
+  <h1>Spacecho · <span>打卡</span></h1>
+  <a class="paper-btn" href="/">回組織圖</a>
+</header>
+<main>
+  <section class="card">
+    <div class="k">日曆 · 有活動的人</div>
+    <div class="cal-nav">
+      <button type="button" id="prev">上月</button>
+      <div id="ym"></div>
+      <button type="button" id="next">下月</button>
+    </div>
+    <div class="dow">
+      <span>日</span><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span>
+    </div>
+    <div class="grid" id="grid"></div>
+    <p class="note">僅語意標籤 · 不含內文、郵件、數字與餘額 · 保留 90 日</p>
+  </section>
+  <section class="card">
+    <div class="k" id="day-k">當日時間軸</div>
+    <div id="timeline"></div>
+  </section>
+</main>
+<script>
+(function () {
+  const grid = document.getElementById("grid");
+  const ymEl = document.getElementById("ym");
+  const tl = document.getElementById("timeline");
+  const dayK = document.getElementById("day-k");
+  let logs = [];
+  let view = new Date();
+  let selected = null;
+
+  function ymd(d) {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return y + "-" + m + "-" + day;
+  }
+
+  function byDay() {
+    const map = {};
+    for (const r of logs) {
+      (map[r.date] || (map[r.date] = [])).push(r);
+    }
+    return map;
+  }
+
+  function peopleOf(rows) {
+    const s = new Set();
+    for (const r of rows) {
+      if (r.from) s.add(r.from);
+      if (r.to) s.add(r.to);
+    }
+    return Array.from(s);
+  }
+
+  function renderCal() {
+    const y = view.getFullYear();
+    const m = view.getMonth();
+    ymEl.textContent = y + " 年 " + (m + 1) + " 月";
+    const first = new Date(y, m, 1);
+    const startPad = first.getDay();
+    const daysIn = new Date(y, m + 1, 0).getDate();
+    const map = byDay();
+    grid.innerHTML = "";
+    for (let i = 0; i < startPad; i++) {
+      const e = document.createElement("div");
+      e.className = "day empty";
+      grid.appendChild(e);
+    }
+    for (let d = 1; d <= daysIn; d++) {
+      const key = ymd(new Date(y, m, d));
+      const rows = map[key] || [];
+      const el = document.createElement("button");
+      el.type = "button";
+      el.className = "day" + (rows.length ? " has" : "") + (selected === key ? " sel" : "");
+      const names = peopleOf(rows);
+      el.innerHTML = '<div class="n">' + d + "</div>" +
+        (names.length ? '<div class="who">' + names.join("、") + "</div>" : "");
+      el.addEventListener("click", () => { selected = key; renderCal(); renderDay(); });
+      grid.appendChild(el);
+    }
+  }
+
+  function renderDay() {
+    const map = byDay();
+    if (!selected) {
+      const keys = Object.keys(map).sort();
+      selected = keys.length ? keys[keys.length - 1] : null;
+    }
+    if (!selected) {
+      dayK.textContent = "當日時間軸";
+      tl.innerHTML = '<p class="empty-state">尚無打卡。投遞（含點對點）會以語意標籤自動記入此頁。</p>';
+      return;
+    }
+    dayK.textContent = selected + " · 時間軸";
+    const rows = (map[selected] || []).slice().sort((a, b) => a.time.localeCompare(b.time));
+    if (!rows.length) {
+      tl.innerHTML = '<p class="empty-state">這天沒有活動。</p>';
+      return;
+    }
+    const ul = document.createElement("ul");
+    ul.className = "tl";
+    for (const r of rows) {
+      const li = document.createElement("li");
+      const sample = r.sample || (String(r.label || "").indexOf("示例") !== -1);
+      li.innerHTML = "<time>" + r.time + "</time><div><strong>" +
+        escapeHtml(r.from) + "</strong> → " + escapeHtml(r.to) +
+        " · " + escapeHtml(r.label) +
+        (sample ? '<span class="badge">示例</span>' : "") + "</div>";
+      ul.appendChild(li);
+    }
+    tl.innerHTML = "";
+    tl.appendChild(ul);
+  }
+
+  function escapeHtml(s) {
+    return String(s == null ? "" : s)
+      .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  }
+
+  document.getElementById("prev").onclick = () => {
+    view = new Date(view.getFullYear(), view.getMonth() - 1, 1);
+    renderCal();
+  };
+  document.getElementById("next").onclick = () => {
+    view = new Date(view.getFullYear(), view.getMonth() + 1, 1);
+    renderCal();
+  };
+
+  fetch("/api/punch?days=90")
+    .then((r) => r.json())
+    .then((data) => {
+      logs = (data && data.logs) || [];
+      if (logs.length) {
+        selected = logs[logs.length - 1].date;
+        const parts = selected.split("-");
+        view = new Date(Number(parts[0]), Number(parts[1]) - 1, 1);
+      }
+      renderCal();
+      renderDay();
+    })
+    .catch(() => {
+      logs = [];
+      renderCal();
+      renderDay();
+    });
+})();
+</script>
+</body>
+</html>

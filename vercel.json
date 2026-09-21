@@ -1,0 +1,8 @@
+{
+  "framework": null,
+  "cleanUrls": true,
+  "trailingSlash": false,
+  "rewrites": [
+    { "source": "/avatars/src-sprite.jpg", "destination": "https://spacecho-src-sprite.vercel.app/avatars/src-sprite.jpg" }
+  ]
+}
